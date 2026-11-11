@@ -1,0 +1,10 @@
+{
+  "id": "team.thread-to-linear",
+  "name": "Thread to Linear",
+  "apiVersion": 1,
+  "description": "Draft a Linear issue from a Buzz thread, review it, and open a prefilled issue form.",
+  "discovery": {
+    "category": "productivity",
+    "tags": ["Linear", "Threads", "Issue tracking"]
+  }
+}
