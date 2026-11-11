@@ -14,7 +14,7 @@ type NativeWindow = Window & {
 const MAX_TITLE = 120;
 const MAX_LINK_LENGTH = 7500;
 const EVENT_ID = /^[0-9a-f]{64}$/;
-const CHANNEL_ID = /^[A-Za-z0-9_-]{1,128}$/;
+const CHANNEL_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$/;
 const LINEAR_NEW = "https://linear.app/new";
 
 function isSourceMessage(message: Message) {
@@ -47,7 +47,8 @@ function makeDraft(selected: Message, root: Message | undefined, replies: readon
   const rows = [root, ...context.slice(-3), selected]
     .filter((row): row is Message => !!row && isSourceMessage(row))
     .filter((row, index, all) => all.findIndex((item) => item.id === row.id) === index)
-    .sort((a, b) => (a.createdAtMs ?? a.createdAt * 1000) - (b.createdAtMs ?? b.createdAt * 1000));
+    .sort((a, b) => (a.createdAtMs ?? a.createdAt * 1000) - (b.createdAtMs ?? b.createdAt * 1000)
+      || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const excerpts = rows.flatMap((row) => {
     const text = limit(row.content.trim().replace(/\s+/g, " "), 180);
     if (!text) return [];
@@ -90,7 +91,7 @@ async function loadDraft(session: Session, selected: Message, signal: AbortSigna
       return makeDraft(selected, undefined, [], true);
     }
     const replies = snapshot.replies.filter((row) => row.channelId === selected.channelId && row.threadRootId === rootId);
-    return makeDraft(selected, snapshot.root, replies, snapshot.limited);
+    return makeDraft(selected, snapshot.root, replies, snapshot.limited || snapshot.canLoadMore);
   } finally {
     signal.removeEventListener("abort", dispose);
     if (!signal.aborted) dispose();
