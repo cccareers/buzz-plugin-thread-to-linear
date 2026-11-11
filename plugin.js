@@ -3,7 +3,7 @@ var inject = ["react", "conversation"];
 var MAX_TITLE = 120;
 var MAX_LINK_LENGTH = 7500;
 var EVENT_ID = /^[0-9a-f]{64}$/;
-var CHANNEL_ID = /^[A-Za-z0-9_-]{1,128}$/;
+var CHANNEL_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$/;
 var LINEAR_NEW = "https://linear.app/new";
 function isSourceMessage(message) {
   return EVENT_ID.test(message.id) && CHANNEL_ID.test(message.channelId) && (!message.threadRootId || EVENT_ID.test(message.threadRootId)) && (!message.delivery || message.delivery === "accepted" || message.delivery === "seen") && !message.membership && !message.huddle && !message.audience && !message.notice;
@@ -17,7 +17,7 @@ function escapeMarkdown(value) {
 }
 function makeDraft(selected, root, replies, partial) {
   const context = replies.filter((row) => row.id !== selected.id && row.id !== root?.id && isSourceMessage(row) && row.content.trim());
-  const rows = [root, ...context.slice(-3), selected].filter((row) => !!row && isSourceMessage(row)).filter((row, index, all) => all.findIndex((item) => item.id === row.id) === index).sort((a, b) => (a.createdAtMs ?? a.createdAt * 1e3) - (b.createdAtMs ?? b.createdAt * 1e3));
+  const rows = [root, ...context.slice(-3), selected].filter((row) => !!row && isSourceMessage(row)).filter((row, index, all) => all.findIndex((item) => item.id === row.id) === index).sort((a, b) => (a.createdAtMs ?? a.createdAt * 1e3) - (b.createdAtMs ?? b.createdAt * 1e3) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const excerpts = rows.flatMap((row) => {
     const text = limit(row.content.trim().replace(/\s+/g, " "), 180);
     if (!text) return [];
@@ -55,7 +55,7 @@ async function loadDraft(session, selected, signal) {
       return makeDraft(selected, void 0, [], true);
     }
     const replies = snapshot.replies.filter((row) => row.channelId === selected.channelId && row.threadRootId === rootId);
-    return makeDraft(selected, snapshot.root, replies, snapshot.limited);
+    return makeDraft(selected, snapshot.root, replies, snapshot.limited || snapshot.canLoadMore);
   } finally {
     signal.removeEventListener("abort", dispose);
     if (!signal.aborted) dispose();
